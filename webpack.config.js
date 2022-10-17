@@ -27,12 +27,13 @@ module.exports = {
         ],
       },
       {
-        test: /\.(png|jpg|gif|svg)$/,
-        loader: "url-loader",
-        options: {
-          name: "[name].[ext]?[hash]",
-          limit: 20000, // 2kb
-        },
+        test: /\.(png|jpg|svg|gif)$/,
+        // loader: "file-loader",
+        use: ["file-loader"],
+        // options: {
+        //   publicPath: "./dist/",
+        //   name: "[name].[ext]?[hash]",
+        // },
       },
       {
         test: /\.js$/,
