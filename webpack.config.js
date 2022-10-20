@@ -5,15 +5,29 @@ const childProcess = require("child_process");
 const HtmlWebpackPlugin = require("html-webpack-plugin");
 const { CleanWebpackPlugin } = require("clean-webpack-plugin");
 const MiniCssExtractPlugin = require("mini-css-extract-plugin");
+const apiMocker = require("connect-api-mocker");
+const OptimizeCSSAssetsPlugin = require("optimize-css-assets-webpack-plugin");
+const TerserPlugin = require("terser-webpack-plugin");
+const CopyPlugin = require("copy-webpack-plugin");
+
+const mode = process.env.NODE_ENV || "development";
 
 module.exports = {
-  mode: "development",
+  mode,
   entry: {
-    main: "./app.js",
+    main: "./src/app.js",
   },
   output: {
     path: path.resolve("./dist"),
     filename: "[name].js",
+  },
+  devServer: {
+    overlay: true,
+    stats: "errors-only",
+    before: (app) => {
+      app.use(apiMocker("/api", "mocks/api"));
+    },
+    hot: true,
   },
   module: {
     rules: [
@@ -28,12 +42,11 @@ module.exports = {
       },
       {
         test: /\.(png|jpg|svg|gif)$/,
-        // loader: "file-loader",
-        use: ["file-loader"],
-        // options: {
-        //   publicPath: "./dist/",
-        //   name: "[name].[ext]?[hash]",
-        // },
+        loader: "url-loader",
+        options: {
+          name: "[name].[ext]?[hash]",
+          limit: 20000,
+        },
       },
       {
         test: /\.js$/,
@@ -41,6 +54,24 @@ module.exports = {
         exclude: /node_modules/,
       },
     ],
+  },
+  optimization: {
+    minimizer:
+      mode === "production"
+        ? [
+            new OptimizeCSSAssetsPlugin(),
+            new TerserPlugin({
+              terserOptions: {
+                compress: {
+                  drop_console: true, // 콘솔 로그를 제거한다
+                },
+              },
+            }),
+          ]
+        : [],
+  },
+  externals: {
+    axios: "axios",
   },
   plugins: [
     new webpack.BannerPlugin({
@@ -73,5 +104,11 @@ module.exports = {
     ...(process.env.NODE_ENV === "production"
       ? [new MiniCssExtractPlugin({ filename: `[name].css` })]
       : []),
+    new CopyPlugin([
+      {
+        from: "./node_modules/axios/dist/axios.min.js",
+        to: "./axios.min.js", // 목적지 파일에 들어간다
+      },
+    ]),
   ],
 };
